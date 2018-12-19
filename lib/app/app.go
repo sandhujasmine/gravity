@@ -109,6 +109,9 @@ type Applications interface {
 
 	// StreamAppHookLogs streams app hook logs to output writer, this is a blocking call
 	StreamAppHookLogs(ctx context.Context, ref HookRef, out io.Writer) error
+
+	// FetchChart returns Helm chart package with the specified application.
+	FetchChart(loc.Locator) (io.ReadCloser, error)
 }
 
 // ListAppsRequest is a request to show applications in a repository

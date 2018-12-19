@@ -380,6 +380,11 @@ func (c *Client) DeleteAppHookJob(ctx context.Context, ref app.HookRef) error {
 	return nil
 }
 
+// FetchChart returns Helm chart package with the specified application.
+func (c *Client) FetchChart(locator loc.Locator) (io.ReadCloser, error) {
+	return nil, trace.NotImplemented("not implemented")
+}
+
 // POST app/v1/applications/:repository_id
 func (c *Client) CreateApp(locator loc.Locator, reader io.Reader, labels map[string]string) (*app.Application, error) {
 	return c.createApp(locator, nil, reader, labels, false)

@@ -226,6 +226,14 @@ func (r *ApplicationsACL) StreamAppHookLogs(ctx context.Context, ref HookRef, ou
 	return r.applications.StreamAppHookLogs(ctx, ref, out)
 }
 
+// FetchChart returns Helm chart package with the specified application.
+func (r *ApplicationsACL) FetchChart(locator loc.Locator) (io.ReadCloser, error) {
+	if err := r.checkApp(locator, teleservices.VerbRead); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return r.applications.FetchChart(locator)
+}
+
 // check checks whether the user has the requested permissions to read write apps
 func (r *ApplicationsACL) check(repoName, verb string) error {
 	return r.checker.CheckAccessToRule(r.repoContext(repoName), teledefaults.Namespace, storage.KindApp, verb, false)

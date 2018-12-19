@@ -445,3 +445,13 @@ func ParseProxyAddr(proxyAddr, defaultWebPort, defaultSSHPort string) (host stri
 
 	return "", "", "", trace.BadParameter("unable to parse port: %v", port)
 }
+
+// ParseChartFilename returns chart name and version from the provided chart
+// package filename
+func ParseChartFilename(filename string) (name, version string, err error) {
+	parts := strings.Split(strings.TrimSuffix(filename, ".tgz"), "-")
+	if len(parts) != 2 {
+		return "", "", trace.BadParameter("bad chart filename: %v", filename)
+	}
+	return parts[0], parts[1], nil
+}

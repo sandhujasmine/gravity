@@ -44,6 +44,7 @@ import (
 	cloudaws "github.com/gravitational/gravity/lib/cloudprovider/aws"
 	"github.com/gravitational/gravity/lib/constants"
 	"github.com/gravitational/gravity/lib/defaults"
+	"github.com/gravitational/gravity/lib/docker"
 	"github.com/gravitational/gravity/lib/helm"
 	"github.com/gravitational/gravity/lib/httplib"
 	"github.com/gravitational/gravity/lib/loc"
@@ -61,6 +62,7 @@ import (
 	"github.com/gravitational/gravity/lib/rpc"
 	pb "github.com/gravitational/gravity/lib/rpc/proto"
 	rpcserver "github.com/gravitational/gravity/lib/rpc/server"
+	"github.com/gravitational/gravity/lib/schema"
 	"github.com/gravitational/gravity/lib/storage"
 	"github.com/gravitational/gravity/lib/storage/keyval"
 	"github.com/gravitational/gravity/lib/users"
@@ -147,6 +149,8 @@ type Handlers struct {
 	Proxy *proxyHandler
 	// BLOB is object storage service web handler
 	BLOB *blobhandler.Server
+	//
+	Registry http.Handler
 }
 
 // rpcCredentials holds generated RPC agents credentials
@@ -549,19 +553,37 @@ func (p *Process) startRegistrySynchronizer(ctx context.Context) error {
 		for {
 			select {
 			case <-time.After(defaults.RegistrySyncInterval):
-				site, err := p.operator.GetLocalSite()
+				cluster, err := p.operator.GetLocalSite()
 				if err != nil {
-					p.Errorf("Failed to query local cluster: %v.", trace.DebugReport(err))
+					p.Errorf("Failed to query local cluster: %v.",
+						trace.DebugReport(err))
 					continue
 				}
-
-				err = p.applications.ExportApp(app.ExportAppRequest{
-					Package:         site.App.Package,
-					RegistryAddress: constants.LocalRegistryAddr,
-					CertName:        constants.DockerRegistry,
+				packages := []loc.Locator{cluster.App.Package}
+				apps, err := p.applications.ListApps(app.ListAppsRequest{
+					Repository: defaults.SystemAccountOrg,
 				})
 				if err != nil {
-					p.Errorf("Failed to synchronize registry: %v.", trace.DebugReport(err))
+					p.Errorf("Failed to query applications: %v.",
+						trace.DebugReport(err))
+					continue
+				}
+				for _, app := range apps {
+					if app.Manifest.Kind == schema.KindApplication {
+						packages = append(packages, app.Package)
+					}
+				}
+				for _, pack := range packages {
+					p.Infof("Exporting %v to registry.", pack)
+					err = p.applications.ExportApp(app.ExportAppRequest{
+						Package:         pack,
+						RegistryAddress: constants.LocalRegistryAddr,
+						CertName:        constants.DockerRegistry,
+					})
+					if err != nil {
+						p.Errorf("Failed to synchronize registry: %v.",
+							trace.DebugReport(err))
+					}
 				}
 			case <-ctx.Done():
 				p.Info("Stopping registry synchronizer.")
@@ -569,7 +591,6 @@ func (p *Process) startRegistrySynchronizer(ctx context.Context) error {
 			}
 		}
 	}()
-
 	return nil
 }
 
@@ -1081,6 +1102,11 @@ func (p *Process) initService(ctx context.Context) (err error) {
 	}
 	p.applications = applications
 
+	p.handlers.Registry, err = docker.NewRegistry(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	p.handlers.Apps, err = apphandler.NewWebHandler(apphandler.WebHandlerConfig{
 		Users:         p.identity,
 		Applications:  applications,
@@ -1429,6 +1455,7 @@ func (p *Process) initMux(ctx context.Context) error {
 		mux.Handler(method, "/t/*portal", p.handlers.Operator) // shortener for instructions tokens
 		mux.Handler(method, "/app/*apps", p.handlers.Apps)
 		mux.Handler(method, "/telekube/*rest", p.handlers.Apps)
+		mux.Handler(method, "/charts/*rest", p.handlers.Apps)
 		mux.Handler(method, "/objects/*rest", p.handlers.BLOB)
 		mux.HandlerFunc(method, "/readyz", p.ReportReadiness)
 		mux.HandlerFunc(method, "/healthz", p.ReportHealth)

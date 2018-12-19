@@ -256,4 +256,8 @@ var (
 	// WebAssetsPackageLocator is the package with web assets
 	WebAssetsPackageLocator = MustParseLocator(
 		fmt.Sprintf("%v/%v:%v", defaults.SystemAccountOrg, "web-assets", ZeroVersion))
+
+	// ChartsLocator is the package with chart repository index file.
+	ChartsLocator = MustParseLocator(
+		fmt.Sprintf("%v/charts:0.0.1", defaults.SystemAccountOrg))
 )

@@ -994,6 +994,8 @@ var (
 	// LocalCacheDir is the location where gravity stores downloaded packages
 	LocalCacheDir = filepath.Join(LocalDataDir, "cache")
 
+	ClusterRegistryDir = filepath.Join(GravityDir, SiteDir, RegistryDir)
+
 	// UsedNamespaces lists the Kubernetes namespaces used by default
 	UsedNamespaces = []string{"default", "kube-system"}
 

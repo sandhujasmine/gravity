@@ -38,6 +38,7 @@ import (
 	"github.com/gravitational/gravity/lib/pack"
 	"github.com/gravitational/gravity/lib/storage"
 	"github.com/gravitational/gravity/lib/users"
+	"github.com/gravitational/gravity/lib/utils"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/gravitational/form"
@@ -55,6 +56,7 @@ type WebHandlerConfig struct {
 	Applications  app.Applications
 	Packages      pack.PackageService
 	ChartRepo     helm.Repository
+	Registry      http.Handler
 	Authenticator httplib.Authenticator
 	Devmode       bool
 }
@@ -108,12 +110,8 @@ func NewWebHandler(cfg WebHandlerConfig) (*WebHandler, error) {
 	h.GET("/telekube/gravity", h.wrap(h.telekubeGravityBinary))
 	h.GET("/telekube/bin/:version/:os/:arch/:binary", h.wrap(h.telekubeBinary))
 
-	// Helm repository handlers.
-	// TODO Add client cert authentication.
-	h.GET("/charts/index.yaml", h.wrap(h.getIndexFile))
-	h.GET("/charts/:name/:version", h.wrap(h.fetchChart))
-	h.POST("/charts/:name/:version", h.wrap(h.putChart))
-	h.DELETE("/charts/:name/:version", h.wrap(h.deleteChart))
+	// Helm charts repository handlers.
+	h.GET("/charts/:name", h.needsAuth(h.fetchChart))
 
 	return h, nil
 }
@@ -123,7 +121,6 @@ func (h *WebHandler) getIndexFile(w http.ResponseWriter, r *http.Request, p http
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	defer reader.Close()
 	w.Header().Set("Content-Type", "application/yaml")
 	_, err = io.Copy(w, reader)
 	if err != nil {
@@ -132,54 +129,29 @@ func (h *WebHandler) getIndexFile(w http.ResponseWriter, r *http.Request, p http
 	return nil
 }
 
-func (h *WebHandler) fetchChart(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-	chartName := p.ByName("name")
-	if chartName == "" {
-		return trace.BadParameter("empty chart name")
+func (h *WebHandler) fetchChart(w http.ResponseWriter, r *http.Request, p httprouter.Params, context *handlerContext) error {
+	name := p.ByName("name")
+	if name == "" {
+		return trace.BadParameter("empty chart filename")
 	}
-	chartVersion := p.ByName("version")
-	if chartVersion == "" {
-		return trace.BadParameter("empty chart version")
+	if name == "index.yaml" {
+		return h.getIndexFile(w, r, p)
 	}
-	reader, err := h.ChartRepo.FetchChart(chartName, chartVersion)
+	chartName, chartVersion, err := utils.ParseChartFilename(name)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	locator, err := loc.NewLocator(defaults.SystemAccountOrg, chartName, chartVersion)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	reader, err := context.applications.FetchChart(*locator)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	defer reader.Close()
 	w.Header().Set("Content-Type", "application/gzip")
 	_, err = io.Copy(w, reader)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
-}
-
-func (h *WebHandler) putChart(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-	chartName := p.ByName("name")
-	if chartName == "" {
-		return trace.BadParameter("empty chart name")
-	}
-	chartVersion := p.ByName("version")
-	if chartVersion == "" {
-		return trace.BadParameter("empty chart version")
-	}
-	err := h.ChartRepo.PutChart(chartName, chartVersion, r.Body)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
-}
-
-func (h *WebHandler) deleteChart(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-	chartName := p.ByName("name")
-	if chartName == "" {
-		return trace.BadParameter("empty chart name")
-	}
-	chartVersion := p.ByName("version")
-	if chartVersion == "" {
-		return trace.BadParameter("empty chart version")
-	}
-	err := h.ChartRepo.DeleteChart(chartName, chartVersion)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -1058,6 +1030,8 @@ func (h *WebHandler) needsAuth(fn serviceHandler) httprouter.Handle {
 		log.WithFields(log.Fields{
 			"method": r.Method,
 		}).Debugf(r.URL.Path)
+
+		log.Infof("%#v", r.Header)
 
 		auth, err := httplib.ParseAuthHeaders(r)
 		if err != nil {

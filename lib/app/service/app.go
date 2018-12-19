@@ -124,6 +124,11 @@ func (r *applications) DeleteApp(req appservice.DeleteRequest) error {
 		}
 		r.Warnf("Force deleting app %v: %v.", req.Package, err)
 	}
+	if r.ChartRepo != nil {
+		if err := r.ChartRepo.RemoveFromIndex(req.Package); err != nil {
+			return trace.Wrap(err)
+		}
+	}
 	if err := r.deleteResourcesPackage(req.Package); err != nil {
 		return trace.Wrap(err)
 	}
@@ -572,7 +577,6 @@ func (r *applications) createApp(locator loc.Locator, packageBytes io.Reader, ma
 	appType, err := applicationType(manifest)
 	if err != nil {
 		return nil, trace.Wrap(err)
-
 	}
 
 	options := []pack.PackageOption{
@@ -590,6 +594,13 @@ func (r *applications) createApp(locator loc.Locator, packageBytes io.Reader, ma
 	}
 	if err != nil {
 		return nil, trace.Wrap(err)
+	}
+
+	if r.ChartRepo != nil {
+		err = r.ChartRepo.AddToIndex(locator)
+		if err != nil && !trace.IsAlreadyExists(err) {
+			return nil, trace.Wrap(err)
+		}
 	}
 
 	return &appservice.Application{
@@ -754,6 +765,11 @@ func (r *applications) GetOperationCrashReport(op storage.AppOperation) (io.Read
 	}()
 
 	return reader, nil
+}
+
+// FetchChart returns Helm chart package with the specified application.
+func (r *applications) FetchChart(locator loc.Locator) (io.ReadCloser, error) {
+	return r.ChartRepo.FetchChart(locator)
 }
 
 func (r *applications) resolveManifest(manifestBytes []byte) (*schema.Manifest, error) {
