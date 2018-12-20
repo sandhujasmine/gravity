@@ -84,9 +84,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	var match RouteMatch
 	var handler http.Handler
-	logrus.Infof("=== DEBUG === GORILLA SERVEHTTP")
 	if r.Match(req, &match) {
-		logrus.Infof("=== DEBUG === GORILLA MATCH: %v", match.Route)
 		handler = match.Handler
 		setVars(req, match.Vars)
 		setCurrentRoute(req, match.Route)
@@ -98,8 +96,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if !r.KeepContext {
-		defer context.Clear(req)
+		defer func() {
+			logrus.Infof("=== DEBUG === CLEARING CONTEXT")
+			context.Clear(req)
+		}()
 	}
+	logrus.Infof("=== CURRENTROUTE(GORILLA) ===: %v", CurrentRoute(req))
 	handler.ServeHTTP(w, req)
 }
 

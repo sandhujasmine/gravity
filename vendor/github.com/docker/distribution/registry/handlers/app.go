@@ -612,7 +612,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
-	ctxu.GetLogger(app).Warn("=== DEBUG === ROUTER.SERVEHTTP")
+	ctxu.GetLogger(app).Infof("=== CURRENTROUTE(APP.SERVEHTTP) ===: %v", mux.CurrentRoute(r))
 	app.router.ServeHTTP(w, r)
 }
 
@@ -642,11 +642,15 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			return
 		}
 
+		ctxu.GetLogger(context).Infof("=== CURRENTROUTE(DISPATCHER) ===: %v", mux.CurrentRoute(r))
+
 		// Add username to request logging
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, auth.UserNameKey))
 
 		// sync up context on the request.
 		r = r.WithContext(context)
+
+		ctxu.GetLogger(context).Infof("=== CURRENTROUTE(DISPATCHER2) ===: %v", mux.CurrentRoute(r))
 
 		if app.nameRequired(r) {
 			nameRef, err := reference.WithName(getName(context))

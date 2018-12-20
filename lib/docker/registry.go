@@ -92,8 +92,8 @@ func NewRegistry(ctx context.Context) (http.Handler, error) {
 	})
 	// TODO What's this for?
 	app.RegisterHealthChecks()
-	handler := alive("/", app)
-	return handler, nil
+	//	handler := alive("/", app)
+	return app, nil
 }
 
 // alive simply wraps the handler with a route that always returns an http 200

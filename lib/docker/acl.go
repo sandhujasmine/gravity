@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 
+	"github.com/gorilla/mux"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
 )
@@ -19,21 +20,18 @@ func newACL(options map[string]interface{}) (auth.AccessController, error) {
 }
 
 func (acl *registryACL) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
-	logrus.Infof("=== DEBUG === AUTHORIZING REGISTRY ACCESS")
 	request, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	logrus.Infof("=== REQUEST: %#v", request)
-	username, password, ok := request.BasicAuth()
+	logrus.Infof("=== CURRENTROUTE(ACL) ===: %v", mux.CurrentRoute(request))
+	username, _, ok := request.BasicAuth()
 	if !ok {
-		logrus.Infof("=== NO CREDS")
 		return nil, &challenge{
 			realm: "basic-realm",
 			err:   auth.ErrInvalidCredential,
 		}
 	}
-	logrus.Infof("=== CREDS: %v %v", username, password)
 	return auth.WithUser(ctx, auth.UserInfo{
 		Name: username,
 	}), nil
