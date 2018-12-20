@@ -1875,8 +1875,8 @@
     "pkg/urlutil",
     "pkg/version"
   ]
-  revision = "d325d2a9c179b33af1a024cdb5a4472b6288016a"
-  version = "v2.12.0-rc.2"
+  revision = "02a47c7249b1fc6d8fd3b94e6b4babf9d818144e"
+  version = "v2.12.1"
 
 [[projects]]
   name = "k8s.io/klog"
@@ -2024,6 +2024,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2c67a600d74e659282495fff394b905a3599d118998504c535e970fb3e8b9aa2"
+  inputs-digest = "a6bad123504bab9e5f5df867918d377a4cd4b07f398506b7e07d335d2ffcbb7e"
   solver-name = "gps-cdcl"
   solver-version = 1

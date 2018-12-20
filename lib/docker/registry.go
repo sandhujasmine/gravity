@@ -30,7 +30,7 @@ import (
 
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/registry/handlers"
-	"github.com/gravitational/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -92,5 +92,23 @@ func NewRegistry(ctx context.Context) (http.Handler, error) {
 	})
 	// TODO What's this for?
 	app.RegisterHealthChecks()
-	return app, nil
+	handler := alive("/", app)
+	return handler, nil
+}
+
+// alive simply wraps the handler with a route that always returns an http 200
+// response when the path is matched. If the path is not matched, the request
+// is passed to the provided handler. There is no guarantee of anything but
+// that the server is up. Wrap with other handlers (such as health.Handler)
+// for greater affect.
+func alive(path string, handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path {
+			w.Header().Set("Cache-Control", "no-cache")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 }
