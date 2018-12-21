@@ -256,3 +256,6 @@ func releaseHistory(env *localenv.LocalEnvironment, conf releaseHistoryConfig) e
 	w.Flush()
 	return nil
 }
+
+func appSearch(env *localenv.LocalEnvironment, pattern string) error {
+}

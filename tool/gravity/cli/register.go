@@ -250,6 +250,9 @@ func RegisterCommands(app *kingpin.Application) *Application {
 	g.AppSyncCmd.RegistryCert = g.AppSyncCmd.Flag("registry-cert", "Docker registry client certificate path.").String()
 	g.AppSyncCmd.RegistryKey = g.AppSyncCmd.Flag("registry-key", "Docker registry client private key path.").String()
 
+	g.AppSearchCmd.CmdClause = g.AppCmd.Command("search", "Search for applications.")
+	g.AppSearchCmd.Pattern = g.AppSearchCmd.Arg("pattern", "Application name pattern.").String()
+
 	// import gravity application
 	g.AppImportCmd.CmdClause = g.AppCmd.Command("import", "Import application into gravity").Hidden()
 	g.AppImportCmd.Source = g.AppImportCmd.Arg("src", "path to application resources (directory / file)").Required().String()

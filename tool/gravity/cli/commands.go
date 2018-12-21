@@ -110,6 +110,8 @@ type Application struct {
 	AppHistoryCmd AppHistoryCmd
 	// AppSyncCmd synchronizes an application image with a cluster
 	AppSyncCmd AppSyncCmd
+	// AppSearchCmd searches for applications.
+	AppSearchCmd AppSearchCmd
 	// AppImportCmd imports an app into cluster
 	AppImportCmd AppImportCmd
 	// AppExportCmd exports specified app into registry
@@ -714,6 +716,13 @@ type AppSyncCmd struct {
 	RegistryCert *string
 	// RegistryKey is a registry client private key path.
 	RegistryKey *string
+}
+
+// AppSearchCmd searches for applications.
+type AppSearchCmd struct {
+	*kingpin.CmdClause
+	// Pattern is an application name pattern.
+	Pattern *string
 }
 
 // AppImportCmd imports app into cluster
