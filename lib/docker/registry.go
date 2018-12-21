@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/gravitational/gravity/lib/defaults"
+	"github.com/gravitational/gravity/lib/users"
 
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/registry/handlers"
@@ -74,7 +75,13 @@ func init() {
 	http.DefaultClient = &http.Client{Transport: transport}
 }
 
-func NewRegistry(ctx context.Context) (http.Handler, error) {
+// Config is the registry server configuration.
+type Config struct {
+	// Users is the users service.
+	Users users.Identity
+}
+
+func NewRegistry(ctx context.Context, config Config) (http.Handler, error) {
 	app := handlers.NewApp(ctx, &configuration.Configuration{
 		Version: configuration.CurrentVersion,
 		Storage: configuration.Storage{
@@ -88,27 +95,11 @@ func NewRegistry(ctx context.Context) (http.Handler, error) {
 		Proxy: configuration.Proxy{
 			RemoteURL: "https://leader.telekube.local:5000",
 		},
-		Auth: configuration.Auth{"gravity": nil},
+		Auth: configuration.Auth{"gravity": configuration.Parameters{
+			"users": config.Users,
+		}},
 	})
 	// TODO What's this for?
 	app.RegisterHealthChecks()
-	//	handler := alive("/", app)
 	return app, nil
-}
-
-// alive simply wraps the handler with a route that always returns an http 200
-// response when the path is matched. If the path is not matched, the request
-// is passed to the provided handler. There is no guarantee of anything but
-// that the server is up. Wrap with other handlers (such as health.Handler)
-// for greater affect.
-func alive(path string, handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == path {
-			w.Header().Set("Cache-Control", "no-cache")
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
 }

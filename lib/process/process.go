@@ -1102,7 +1102,9 @@ func (p *Process) initService(ctx context.Context) (err error) {
 	}
 	p.applications = applications
 
-	p.handlers.Registry, err = docker.NewRegistry(ctx)
+	p.handlers.Registry, err = docker.NewRegistry(ctx, docker.Config{
+		Users: p.identity,
+	})
 	if err != nil {
 		return trace.Wrap(err)
 	}

@@ -325,6 +325,7 @@
   version = "v3.2.0"
 
 [[projects]]
+  branch = "roman/fix"
   name = "github.com/docker/distribution"
   packages = [
     ".",
@@ -364,7 +365,8 @@
     "uuid",
     "version"
   ]
-  revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
+  revision = "3c5aaddb010efdc32fde566f9511b94feb51424b"
+  source = "github.com/gravitational/distribution"
 
 [[projects]]
   name = "github.com/docker/docker"
@@ -2024,6 +2026,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a6bad123504bab9e5f5df867918d377a4cd4b07f398506b7e07d335d2ffcbb7e"
+  inputs-digest = "fe1b0b0e82bafc6cd970da7c7383a9c3621b0e7e6ccc94b92dde8c57c6dc531e"
   solver-name = "gps-cdcl"
   solver-version = 1

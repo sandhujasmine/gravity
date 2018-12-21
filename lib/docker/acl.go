@@ -4,19 +4,32 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gravitational/gravity/lib/httplib"
+	"github.com/gravitational/gravity/lib/users"
+
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 
-	"github.com/gorilla/mux"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
 )
 
 type registryACL struct {
+	Users users.Identity
 }
 
-func newACL(options map[string]interface{}) (auth.AccessController, error) {
-	return &registryACL{}, nil
+func newACL(parameters map[string]interface{}) (auth.AccessController, error) {
+	usersI, ok := parameters["users"]
+	if !ok {
+		return nil, trace.BadParameter("missing Users")
+	}
+	users, ok := usersI.(users.Identity)
+	if !ok {
+		return nil, trace.BadParameter("expected users.Identity, got: %T", usersI)
+	}
+	return &registryACL{
+		Users: users,
+	}, nil
 }
 
 func (acl *registryACL) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
@@ -24,16 +37,23 @@ func (acl *registryACL) Authorized(ctx context.Context, accessItems ...auth.Acce
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	logrus.Infof("=== CURRENTROUTE(ACL) ===: %v", mux.CurrentRoute(request))
-	username, _, ok := request.BasicAuth()
-	if !ok {
+	authCreds, err := httplib.ParseAuthHeaders(request)
+	if err != nil {
 		return nil, &challenge{
 			realm: "basic-realm",
 			err:   auth.ErrInvalidCredential,
 		}
 	}
+	user, _, err := acl.Users.AuthenticateUser(*authCreds)
+	if err != nil {
+		logrus.Warnf("Authentication failure for %v: %v.", authCreds.Username, err)
+		return nil, &challenge{
+			realm: "basic-realm",
+			err:   auth.ErrAuthenticationFailure,
+		}
+	}
 	return auth.WithUser(ctx, auth.UserInfo{
-		Name: username,
+		Name: user.GetName(),
 	}), nil
 }
 

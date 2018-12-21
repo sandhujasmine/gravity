@@ -12,7 +12,6 @@ import (
 	"regexp"
 
 	"github.com/gorilla/context"
-	"github.com/sirupsen/logrus"
 )
 
 // NewRouter returns a new router instance.
@@ -96,12 +95,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if !r.KeepContext {
-		defer func() {
-			logrus.Infof("=== DEBUG === CLEARING CONTEXT")
-			context.Clear(req)
-		}()
+		defer context.Clear(req)
 	}
-	logrus.Infof("=== CURRENTROUTE(GORILLA) ===: %v", CurrentRoute(req))
 	handler.ServeHTTP(w, req)
 }
 
