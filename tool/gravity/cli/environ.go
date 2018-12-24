@@ -117,8 +117,10 @@ func UpdateEnvars(localEnv, updateEnv *localenv.LocalEnvironment, resource teles
 	config := environ.Config{
 		Operator:     operator,
 		Operation:    operation,
+		Apps:         clusterEnv.Apps,
 		Backend:      clusterEnv.Backend,
 		LocalBackend: updateEnv.Backend,
+		Client:       clusterEnv.Client,
 		Servers:      cluster.ClusterState.Servers,
 		ClusterKey:   cluster.Key(),
 		Silent:       localEnv.Silent,
